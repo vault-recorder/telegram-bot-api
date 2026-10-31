@@ -44,7 +44,7 @@ class HttpServer final : public td::TcpListener::Callback {
 
   static constexpr std::size_t MAX_IN_MEMORY_POST_SIZE = 0;
   static constexpr std::size_t MAX_FILE_COUNT = 50;
-  static constexpr td::int32 IDLE_TIMEOUT = 500;
+  static constexpr td::int32 IDLE_TIMEOUT = 7200;
 
   void start_up() final {
     auto now = td::Time::now();
