@@ -1,0 +1,62 @@
+name: Build telegram-bot-api (idle-timeout 7200s)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-binary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (com submódulo td)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Confirmar patch
+        run: |
+          grep -n "IDLE_TIMEOUT" telegram-bot-api/HttpServer.h
+          grep -q "IDLE_TIMEOUT = 7200" telegram-bot-api/HttpServer.h
+
+      - name: Instalar dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make git zlib1g-dev libssl-dev gperf cmake g++
+
+      - name: Build (Release)
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --target install -j"$(nproc)"
+
+      - name: Verificar versão
+        run: ./build/telegram-bot-api --version || ./telegram-bot-api --version || true
+
+      - name: Publicar binário como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-bot-api-idle7200-binary
+          path: build/telegram-bot-api
+          if-no-files-found: error
+
+  build-docker-image:
+    needs: build-binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (com submódulo td)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build da imagem (sem push, sem segredos)
+        run: docker build -t telegram-bot-api-idle7200:latest .
+
+      - name: Salvar imagem como tarball
+        run: docker save telegram-bot-api-idle7200:latest -o telegram-bot-api-idle7200.tar
+
+      - name: Publicar imagem como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-bot-api-idle7200-image
+          path: telegram-bot-api-idle7200.tar
+          if-no-files-found: error
